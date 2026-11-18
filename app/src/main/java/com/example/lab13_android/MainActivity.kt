@@ -3,19 +3,24 @@ package com.example.lab13_android
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -23,7 +28,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -31,6 +38,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -38,11 +46,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
 
 private enum class ContentDemoState {
     Loading,
@@ -296,5 +307,245 @@ private fun VisibilityAnimationExercise() {
                 )
             }
         }
+
+        NebulaDashGame()
+    }
+}
+
+@Composable
+private fun NebulaDashGame() {
+    var isGameRunning by rememberSaveable { mutableStateOf(false) }
+    var score by rememberSaveable { mutableStateOf(0) }
+    var secondsRemaining by rememberSaveable { mutableStateOf(20) }
+    var targetIndex by rememberSaveable { mutableStateOf(0) }
+
+    LaunchedEffect(isGameRunning) {
+        if (isGameRunning) {
+            while (secondsRemaining > 0) {
+                delay(1_000)
+                secondsRemaining = (secondsRemaining - 1).coerceAtLeast(0)
+            }
+            isGameRunning = false
+        }
+    }
+
+    val scoreBadgeColor by animateColorAsState(
+        targetValue = when {
+            score >= 50 -> Color(0xFF19B99A)
+            score >= 20 -> Color(0xFF7C61E8)
+            else -> Color(0xFF4053A8)
+        },
+        animationSpec = tween(durationMillis = 350),
+        label = "scoreBadgeColor",
+    )
+
+    Text(
+        text = "NEBULA DASH · PROTOTIPO",
+        style = MaterialTheme.typography.headlineSmall,
+        fontWeight = FontWeight.Black,
+        color = Color(0xFF172B4D),
+        textAlign = TextAlign.Center,
+    )
+    Text(
+        text = "Atrapa el núcleo antes de que se cierre el portal.",
+        style = MaterialTheme.typography.bodyLarge,
+        color = Color(0xFF52627A),
+        textAlign = TextAlign.Center,
+    )
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        GameHudCard(
+            label = "PUNTOS",
+            modifier = Modifier.weight(1f),
+            backgroundColor = scoreBadgeColor,
+        ) {
+            AnimatedContent(
+                targetState = score,
+                transitionSpec = {
+                    fadeIn(tween(180)) togetherWith fadeOut(tween(120))
+                },
+                label = "scoreCounter",
+            ) { displayedScore ->
+                Text(
+                    text = displayedScore.toString(),
+                    color = Color.White,
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+        }
+        GameHudCard(
+            label = "TIEMPO",
+            modifier = Modifier.weight(1f),
+            backgroundColor = Color(0xFF26345E),
+        ) {
+            AnimatedContent(
+                targetState = secondsRemaining,
+                transitionSpec = {
+                    fadeIn(tween(180)) togetherWith fadeOut(tween(120))
+                },
+                label = "countdown",
+            ) { displayedSeconds ->
+                Text(
+                    text = "${displayedSeconds}s",
+                    color = Color.White,
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+        }
+    }
+
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(300.dp)
+            .clip(RoundedCornerShape(28.dp))
+            .background(
+                Brush.linearGradient(
+                    colors = listOf(Color(0xFF111A3A), Color(0xFF402B78), Color(0xFF1B526F)),
+                ),
+            ),
+    ) {
+        val xFraction = (targetIndex % 4) / 3f
+        val yFraction = ((targetIndex / 4) % 3) / 2f
+        val targetX by animateDpAsState(
+            targetValue = (maxWidth - 76.dp) * xFraction,
+            animationSpec = tween(durationMillis = 420),
+            label = "targetX",
+        )
+        val targetY by animateDpAsState(
+            targetValue = 66.dp + (maxHeight - 144.dp) * yFraction,
+            animationSpec = tween(durationMillis = 420),
+            label = "targetY",
+        )
+        val targetColor by animateColorAsState(
+            targetValue = when (targetIndex % 3) {
+                0 -> Color(0xFF63E6FF)
+                1 -> Color(0xFFFFD166)
+                else -> Color(0xFFFF70C5)
+            },
+            animationSpec = tween(durationMillis = 300),
+            label = "coreColor",
+        )
+        val targetScale by animateFloatAsState(
+            targetValue = if (targetIndex % 2 == 0) 1f else 0.82f,
+            animationSpec = tween(durationMillis = 300),
+            label = "coreScale",
+        )
+
+        Text(
+            text = if (isGameRunning) "TOCA EL NÚCLEO" else "PORTAL DE NEBULOSA",
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 18.dp),
+            color = Color.White.copy(alpha = 0.82f),
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 2.sp,
+        )
+
+        AnimatedVisibility(
+            visible = isGameRunning,
+            modifier = Modifier.offset(x = targetX, y = targetY),
+            enter = fadeIn(tween(300)) + scaleIn(initialScale = 0.45f, animationSpec = tween(300)),
+            exit = fadeOut(tween(200)) + scaleOut(targetScale = 0.45f, animationSpec = tween(200)),
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(68.dp)
+                    .graphicsLayer {
+                        scaleX = targetScale
+                        scaleY = targetScale
+                    }
+                    .clip(CircleShape)
+                    .background(targetColor)
+                    .clickable {
+                        if (isGameRunning) {
+                            score += 10
+                            targetIndex = (targetIndex + 1) % 12
+                        }
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "✦",
+                    color = Color(0xFF111A3A),
+                    fontSize = 34.sp,
+                    fontWeight = FontWeight.Black,
+                )
+            }
+        }
+
+        AnimatedContent(
+            targetState = isGameRunning to (secondsRemaining == 0),
+            modifier = Modifier.align(Alignment.BottomCenter),
+            transitionSpec = {
+                fadeIn(tween(250)) togetherWith fadeOut(tween(150))
+            },
+            label = "gamePrompt",
+        ) { (running, finished) ->
+            Text(
+                text = when {
+                    running -> "¡Rápido! Cada núcleo vale 10 puntos"
+                    finished -> "Ronda terminada · Puntuación: $score"
+                    else -> "Pulsa iniciar para comenzar la ronda"
+                },
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 18.dp),
+                color = Color.White.copy(alpha = 0.9f),
+                textAlign = TextAlign.Center,
+                fontWeight = FontWeight.Medium,
+            )
+        }
+    }
+
+    Button(
+        onClick = {
+            if (!isGameRunning) {
+                score = 0
+                secondsRemaining = 20
+                targetIndex = 0
+                isGameRunning = true
+            }
+        },
+        modifier = Modifier.fillMaxWidth(),
+        enabled = !isGameRunning,
+    ) {
+        Text(if (isGameRunning) "Partida en curso…" else "Iniciar partida")
+    }
+    Text(
+        text = "Animaciones combinadas: aparición y escala del núcleo, desplazamiento y tamaño, cambio de color, contador y marcador animados.",
+        style = MaterialTheme.typography.bodySmall,
+        color = Color(0xFF52627A),
+        textAlign = TextAlign.Center,
+    )
+}
+
+@Composable
+private fun GameHudCard(
+    label: String,
+    modifier: Modifier = Modifier,
+    backgroundColor: Color,
+    content: @Composable () -> Unit,
+) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(backgroundColor)
+            .padding(vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(
+            text = label,
+            color = Color.White.copy(alpha = 0.75f),
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 1.5.sp,
+        )
+        content()
     }
 }
