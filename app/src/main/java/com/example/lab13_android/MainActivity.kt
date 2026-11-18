@@ -106,7 +106,7 @@ private fun VisibilityAnimationExercise() {
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = "¡Hola! El cuadro apareció con AnimatedVisibility",
+                    text = "¡Hola, DANTE-GONZALES!\nEl cuadro apareció con AnimatedVisibility",
                     modifier = Modifier.padding(24.dp),
                     color = Color.White,
                     fontSize = 20.sp,
