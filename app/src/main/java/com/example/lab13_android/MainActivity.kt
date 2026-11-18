@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -17,7 +18,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -59,10 +62,21 @@ class MainActivity : ComponentActivity() {
 private fun VisibilityAnimationExercise() {
     var isBoxVisible by rememberSaveable { mutableStateOf(false) }
     var isGreen by rememberSaveable { mutableStateOf(false) }
+    var isLargeAndShifted by rememberSaveable { mutableStateOf(false) }
     val animatedBoxColor by animateColorAsState(
         targetValue = if (isGreen) Color(0xFF2E9D63) else Color(0xFF5267D5),
         animationSpec = tween(durationMillis = 900),
         label = "animatedBoxColor",
+    )
+    val animatedSize by animateDpAsState(
+        targetValue = if (isLargeAndShifted) 152.dp else 96.dp,
+        animationSpec = tween(durationMillis = 700),
+        label = "animatedBoxSize",
+    )
+    val animatedOffset by animateDpAsState(
+        targetValue = if (isLargeAndShifted) 96.dp else 0.dp,
+        animationSpec = tween(durationMillis = 700),
+        label = "animatedBoxOffset",
     )
 
     Column(
@@ -161,6 +175,54 @@ private fun VisibilityAnimationExercise() {
                 fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center,
             )
+        }
+
+        Text(
+            text = "Animación de tamaño y posición",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF172B4D),
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            text = "animateDpAsState anima el tamaño y el desplazamiento durante 700 ms.",
+            style = MaterialTheme.typography.bodyLarge,
+            color = Color(0xFF52627A),
+            textAlign = TextAlign.Center,
+        )
+        Button(
+            onClick = { isLargeAndShifted = !isLargeAndShifted },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(if (isLargeAndShifted) "Restablecer cuadro" else "Mover y ampliar cuadro")
+        }
+        Text(
+            text = "Orden aplicado: size() y luego offset(). Invierte ambos modificadores en el código para comparar la medición y la colocación.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color(0xFF52627A),
+            textAlign = TextAlign.Center,
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(190.dp),
+            contentAlignment = Alignment.CenterStart,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(animatedSize)
+                    .offset(x = animatedOffset)
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(Color(0xFFE28A35)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = if (isLargeAndShifted) "Grande" else "Pequeño",
+                    color = Color.White,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center,
+                )
+            }
         }
     }
 }
