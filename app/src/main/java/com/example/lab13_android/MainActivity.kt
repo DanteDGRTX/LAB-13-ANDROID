@@ -5,17 +5,33 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.animateColor
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateDp
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.keyframes
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.updateTransition
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -29,6 +45,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -41,6 +58,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -49,16 +68,24 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 private enum class ContentDemoState {
     Loading,
     Content,
     Error,
+}
+
+private enum class CodelabTab {
+    Home,
+    Work,
 }
 
 class MainActivity : ComponentActivity() {
@@ -309,6 +336,7 @@ private fun VisibilityAnimationExercise() {
         }
 
         NebulaDashGame()
+        CodelabAnimationLab()
     }
 }
 
@@ -547,5 +575,237 @@ private fun GameHudCard(
             letterSpacing = 1.5.sp,
         )
         content()
+    }
+}
+
+@Composable
+private fun CodelabAnimationLab() {
+    var topicExpanded by rememberSaveable { mutableStateOf(false) }
+    var selectedTab by rememberSaveable { mutableStateOf(CodelabTab.Home) }
+    var isTaskVisible by rememberSaveable { mutableStateOf(true) }
+    val taskOffset = remember { Animatable(0f) }
+    val coroutineScope = rememberCoroutineScope()
+    val tabTransition = updateTransition(targetState = selectedTab, label = "codelabTabs")
+    val loadingTransition = rememberInfiniteTransition(label = "loadingPulse")
+    val loadingAlpha by loadingTransition.animateFloat(
+        initialValue = 0.25f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = keyframes {
+                durationMillis = 1_000
+                0.7f at 500
+            },
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "loadingAlpha",
+    )
+
+    Text(
+        text = "PRÁCTICA EXTRA · CODELAB DE ANIMACIONES",
+        style = MaterialTheme.typography.titleLarge,
+        fontWeight = FontWeight.Bold,
+        color = Color(0xFF172B4D),
+        textAlign = TextAlign.Center,
+    )
+    Text(
+        text = "Ejemplos interactivos de tamaño, transiciones coordinadas, animación infinita y gestos.",
+        style = MaterialTheme.typography.bodyLarge,
+        color = Color(0xFF52627A),
+        textAlign = TextAlign.Center,
+    )
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(Color.White)
+            .clickable { topicExpanded = !topicExpanded }
+            .animateContentSize(animationSpec = spring())
+            .padding(18.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = if (topicExpanded) "⌄  animateContentSize · contraer" else "›  animateContentSize · expandir",
+            color = Color(0xFF172B4D),
+            fontWeight = FontWeight.Bold,
+        )
+        Text(
+            text = "La tarjeta anima su propia altura al cambiar el contenido.",
+            color = Color(0xFF52627A),
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        AnimatedVisibility(
+            visible = topicExpanded,
+            enter = slideInVertically(
+                initialOffsetY = { fullHeight -> -fullHeight },
+                animationSpec = tween(durationMillis = 220, easing = LinearOutSlowInEasing),
+            ) + fadeIn(tween(durationMillis = 220)),
+            exit = slideOutVertically(
+                targetOffsetY = { fullHeight -> -fullHeight },
+                animationSpec = tween(durationMillis = 260, easing = FastOutLinearInEasing),
+            ) + fadeOut(tween(durationMillis = 180)),
+        ) {
+            Text(
+                text = "El tamaño del contenedor sigue el cambio de composición con un resorte, mientras el detalle entra y sale desde arriba.",
+                color = Color(0xFF34445E),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+    }
+
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(Color.White),
+    ) {
+        val tabItemWidth = maxWidth / 2
+        val indicatorLeft by tabTransition.animateDp(label = "tabIndicatorPosition") { page ->
+            if (page == CodelabTab.Home) 0.dp else tabItemWidth
+        }
+        val indicatorColor by tabTransition.animateColor(label = "tabIndicatorColor") { page ->
+            if (page == CodelabTab.Home) Color(0xFF5267D5) else Color(0xFF2E9D63)
+        }
+        val tabPanelColor by tabTransition.animateColor(label = "tabPanelColor") { page ->
+            if (page == CodelabTab.Home) Color(0xFFFFF3ED) else Color(0xFFE9F5EC)
+        }
+
+        Column {
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { selectedTab = CodelabTab.Home }
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("Inicio", color = Color(0xFF172B4D), fontWeight = FontWeight.SemiBold)
+                }
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { selectedTab = CodelabTab.Work }
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("Trabajo", color = Color(0xFF172B4D), fontWeight = FontWeight.SemiBold)
+                }
+            }
+            Box(
+                modifier = Modifier
+                    .offset(x = indicatorLeft)
+                    .width(tabItemWidth)
+                    .height(4.dp)
+                    .background(indicatorColor),
+            )
+            Text(
+                text = if (selectedTab == CodelabTab.Home) {
+                    "Panel personal · fondo claro"
+                } else {
+                    "Panel de trabajo · fondo verde"
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(tabPanelColor)
+                    .padding(16.dp),
+                color = Color(0xFF34445E),
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(Color(0xFFE9EDF5))
+            .padding(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(14.dp)
+                .graphicsLayer { alpha = loadingAlpha }
+                .clip(CircleShape)
+                .background(Color(0xFF5267D5)),
+        )
+        Column {
+            Text("Sincronizando datos", color = Color(0xFF172B4D), fontWeight = FontWeight.Bold)
+            Text("Indicador con repetición infinita", color = Color(0xFF52627A))
+        }
+    }
+
+    Text(
+        text = "Gesto Animatable · desliza la tarea para descartarla",
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold,
+        color = Color(0xFF172B4D),
+        textAlign = TextAlign.Center,
+    )
+    AnimatedVisibility(
+        visible = isTaskVisible,
+        modifier = Modifier.fillMaxWidth(),
+        enter = fadeIn(tween(200)) + slideInVertically(initialOffsetY = { -it }),
+        exit = fadeOut(tween(180)) + slideOutVertically(targetOffsetY = { -it }),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .graphicsLayer { translationX = taskOffset.value }
+                .clip(RoundedCornerShape(18.dp))
+                .background(Color(0xFF26345E))
+                .pointerInput(Unit) {
+                    detectHorizontalDragGestures(
+                        onHorizontalDrag = { change, dragAmount ->
+                            change.consume()
+                            coroutineScope.launch {
+                                taskOffset.snapTo((taskOffset.value + dragAmount).coerceIn(-700f, 700f))
+                            }
+                        },
+                        onDragEnd = {
+                            coroutineScope.launch {
+                                if (abs(taskOffset.value) > 140f) {
+                                    val dismissDirection = if (taskOffset.value > 0f) 1f else -1f
+                                    taskOffset.animateTo(
+                                        targetValue = dismissDirection * 1_000f,
+                                        animationSpec = tween(220),
+                                    )
+                                    isTaskVisible = false
+                                } else {
+                                    taskOffset.animateTo(targetValue = 0f, animationSpec = spring())
+                                }
+                            }
+                        },
+                        onDragCancel = {
+                            coroutineScope.launch {
+                                taskOffset.animateTo(targetValue = 0f, animationSpec = spring())
+                            }
+                        },
+                    )
+                }
+                .padding(18.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("✦", color = Color(0xFFFFD166), fontSize = 26.sp)
+            Column {
+                Text("Recolectar energía", color = Color.White, fontWeight = FontWeight.Bold)
+                Text("Desliza a cualquier lado", color = Color.White.copy(alpha = 0.75f))
+            }
+        }
+    }
+    if (!isTaskVisible) {
+        Button(
+            onClick = {
+                coroutineScope.launch {
+                    taskOffset.snapTo(0f)
+                    isTaskVisible = true
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("Restaurar tarea")
+        }
     }
 }
