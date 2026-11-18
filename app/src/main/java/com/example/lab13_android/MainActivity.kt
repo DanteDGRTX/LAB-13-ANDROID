@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.expandVertically
@@ -11,6 +12,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -42,6 +44,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+private enum class ContentDemoState {
+    Loading,
+    Content,
+    Error,
+}
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -63,6 +71,7 @@ private fun VisibilityAnimationExercise() {
     var isBoxVisible by rememberSaveable { mutableStateOf(false) }
     var isGreen by rememberSaveable { mutableStateOf(false) }
     var isLargeAndShifted by rememberSaveable { mutableStateOf(false) }
+    var contentDemoState by rememberSaveable { mutableStateOf(ContentDemoState.Loading) }
     val animatedBoxColor by animateColorAsState(
         targetValue = if (isGreen) Color(0xFF2E9D63) else Color(0xFF5267D5),
         animationSpec = tween(durationMillis = 900),
@@ -219,6 +228,69 @@ private fun VisibilityAnimationExercise() {
                 Text(
                     text = if (isLargeAndShifted) "Grande" else "Pequeño",
                     color = Color.White,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        }
+
+        Text(
+            text = "Cambio de contenido con AnimatedContent",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF172B4D),
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            text = "Selecciona un estado para animar la transición entre mensajes.",
+            style = MaterialTheme.typography.bodyLarge,
+            color = Color(0xFF52627A),
+            textAlign = TextAlign.Center,
+        )
+        Button(
+            onClick = { contentDemoState = ContentDemoState.Loading },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("Mostrar estado: Cargando")
+        }
+        Button(
+            onClick = { contentDemoState = ContentDemoState.Content },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("Mostrar estado: Contenido")
+        }
+        Button(
+            onClick = { contentDemoState = ContentDemoState.Error },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("Mostrar estado: Error")
+        }
+        AnimatedContent(
+            targetState = contentDemoState,
+            transitionSpec = {
+                fadeIn(animationSpec = tween(durationMillis = 600)) togetherWith
+                    fadeOut(animationSpec = tween(durationMillis = 350))
+            },
+            label = "contentStateTransition",
+        ) { targetState ->
+            val (message, backgroundColor) = when (targetState) {
+                ContentDemoState.Loading -> "Cargando datos…" to Color(0xFF5267D5)
+                ContentDemoState.Content -> "Contenido cargado correctamente." to Color(0xFF2E9D63)
+                ContentDemoState.Error -> "Ocurrió un error al cargar el contenido." to Color(0xFFC44343)
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(150.dp)
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(backgroundColor),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = message,
+                    modifier = Modifier.padding(24.dp),
+                    color = Color.White,
+                    fontSize = 20.sp,
                     fontWeight = FontWeight.SemiBold,
                     textAlign = TextAlign.Center,
                 )
